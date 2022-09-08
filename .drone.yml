@@ -9,7 +9,8 @@ steps:
 - name: clone
   image: alpine/git
   commands:
-  - git clone DRONE_REPO_LINK .
+  - echo "172.72.0.3 git.local" >> /etc/hosts
+  - git clone $DRONE_REPO_LINK .
   - git checkout $DRONE_COMMIT
 
 - name: test
