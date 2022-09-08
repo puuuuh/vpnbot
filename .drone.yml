@@ -3,9 +3,9 @@ type: docker
 name: default
 
 steps:
-- name: test
+- name: test-and-build
   image: rust:slim-buster
   commands:
-  - rustup add component clippy
+  - rustup component add clippy
   - cargo clippy
   - cargo build --release
