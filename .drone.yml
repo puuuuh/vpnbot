@@ -3,6 +3,12 @@ type: docker
 name: default
 
 steps:
+- name: clone
+  image: alpine/git
+  commands:
+  - git clone DRONE_REPO_LINK .
+  - git checkout $DRONE_COMMIT
+
 - name: test
   image: rust:slim-buster
   commands:
