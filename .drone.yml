@@ -1,0 +1,11 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+- name: test
+  image: rust:slim-buster
+  commands:
+  - rustup add component clippy
+  - cargo clippy
+  - cargo build --release
