@@ -6,7 +6,7 @@ steps:
 - name: test-and-build
   image: rust:slim-buster
   commands:
-  - apt update && apt install -y llvm-dev libclang-dev linux-libc-dev
+  - apt update && apt install -y llvm-dev libclang-dev linux-libc-dev clang
   - rustup component add clippy
   - cargo clippy
   - cargo build --release
