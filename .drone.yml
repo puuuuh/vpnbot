@@ -2,19 +2,7 @@ kind: pipeline
 type: docker
 name: default
 
-clone:
-  disable: true
-
 steps:
-- name: clone
-  image: alpine/git
-  commands:
-  - ping git.local -c 5
-  - echo "172.72.0.3 git.local" >> /etc/hosts
-  - ping git.local -c 5
-  - git clone $DRONE_REPO_LINK .
-  - git checkout $DRONE_COMMIT
-
 - name: test
   image: rust:slim-buster
   commands:
