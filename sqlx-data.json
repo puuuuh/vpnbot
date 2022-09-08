@@ -1,3 +1,125 @@
 {
-  "db": "SQLite"
+  "db": "SQLite",
+  "00f668d0b0d374fd446c817ff508d86b6af08268b56430c163db99b33727df5d": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "INSERT INTO peers VALUES($1, $2)"
+  },
+  "280e5a8a7319b5962c8cc5cca291bb7da5ed9976b4fd8aaa82081e605eb5b67c": {
+    "describe": {
+      "columns": [
+        {
+          "name": "count",
+          "ordinal": 0,
+          "type_info": "Int"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "SELECT COUNT(*) as count FROM peers"
+  },
+  "295368e5fc88a0d32f5bb8d0bff53ccdfcedb48d777f4b4782acca4b12d7de01": {
+    "describe": {
+      "columns": [
+        {
+          "name": "ip",
+          "ordinal": 0,
+          "type_info": "Int"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 1,
+          "type_info": "Blob"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT * FROM peers WHERE ip = $1"
+  },
+  "2aa33f3192c5a55bdbb061a3e3aaae67c8d7ede7f64e0a7273def5853da18800": {
+    "describe": {
+      "columns": [
+        {
+          "name": "double_vpn",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "ip",
+          "ordinal": 1,
+          "type_info": "Int"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 2,
+          "type_info": "Blob"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT settings.double_vpn, peers.ip, peers.public_key FROM peers LEFT JOIN settings ON peers.ip = settings.ip WHERE peers.ip = $1"
+  },
+  "66cc47ef0bb4ac33a3df749ca8dacd0cff77063d850deae2064a09c133202b1e": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "INSERT INTO settings VALUES($1, $2) ON CONFLICT(ip) DO UPDATE SET double_vpn = excluded.double_vpn"
+  },
+  "829c73bab978349af3132e56557336232fbd640c9cbe0ddaa48cb6d836b4cac1": {
+    "describe": {
+      "columns": [
+        {
+          "name": "double_vpn",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "ip",
+          "ordinal": 1,
+          "type_info": "Int"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 2,
+          "type_info": "Blob"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "SELECT settings.double_vpn, peers.ip, peers.public_key FROM peers LEFT JOIN settings ON peers.ip = settings.ip"
+  }
 }
