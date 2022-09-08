@@ -14,7 +14,7 @@ axum = { version = "0.4.8" }
 serde = { version = "1.0.136", features = ["derive"] }
 async-trait = { version = "0.1.52" }
 wireguard-control = { version = "1.5.0" }
-sqlx = { version = "0.6", features = ["sqlite", "runtime-tokio-rustls"] }
+sqlx = { version = "0.6", features = ["sqlite", "runtime-tokio-rustls", "offline"] }
 cidr = { version = "0.2.1" }
 thiserror = { version = "1" }
 tracing = { version = "0.1" }
