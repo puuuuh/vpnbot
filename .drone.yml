@@ -15,7 +15,7 @@ steps:
 - name: publish
   image: alpine:latest
   commands:
-  - apt add docker
+  - apk add docker
   - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
   - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
   - docker rmi registry.local:5000/puuuh/wireguard-ext:latest
