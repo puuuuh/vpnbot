@@ -2,15 +2,10 @@ use std::net::{IpAddr, Ipv4Addr};
 
 use cidr::Ipv4Cidr;
 
-
-
-
 use thiserror::Error;
 use wireguard_control::{
     Backend, Device, DeviceUpdate, InterfaceName, InvalidInterfaceName, Key, PeerConfigBuilder,
 };
-
-
 
 #[derive(Debug, Error)]
 pub enum WireguardControlError {
