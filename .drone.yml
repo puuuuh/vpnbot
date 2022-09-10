@@ -13,16 +13,16 @@ steps:
   - cargo build --release
 
 - name: publish
-  image: alpine:latest
-  commands:
-  - apk add docker
-  - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
-  - docker push registry.local:5000/puuuh/wireguard-ext:latest
-  - docker rmi registry.local:5000/puuuh/wireguard-ext:latest
+  image: plugins/docker
   volumes:
   - name: docker
     path: /var/run/docker.sock
-      
+  settings:
+    repo: registry.local:5000/puuuh/wireguard-ext
+    username: puuuh
+    password: p25*CXhlp74O
+    insecure: true
+
 volumes:
 - name: docker
   host:
