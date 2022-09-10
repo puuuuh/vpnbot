@@ -18,7 +18,7 @@ steps:
   - name: docker
     path: /var/run/docker.sock
   settings:
-    repo: http://registry.local:5000/puuuh/wireguard-ext
+    repo: registry.local:5000/puuuh/wireguard-ext
     username: puuuh
     password: p25*CXhlp74O
     insecure: false
