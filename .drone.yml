@@ -17,7 +17,7 @@ steps:
   commands:
   - apk add docker
   - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
-  - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
+  - docker push registry.local:5000/puuuh/wireguard-ext:latest
   - docker rmi registry.local:5000/puuuh/wireguard-ext:latest
   volumes:
   - name: docker
