@@ -13,11 +13,12 @@ steps:
   - cargo build --release
 
 - name: publish
-  image: docker:latest
+  image: alpine:latest
   volumes:
   - name: docker
     path: /var/run/docker.sock
   commands:
+  - apt add docker
   - echo "{\"insecure-registries\" : [ \"registry.local:5000\" ]}" > /etc/docker/daemon.json
   - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
   - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
