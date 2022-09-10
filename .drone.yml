@@ -7,13 +7,13 @@ steps:
   image: rust:slim-buster
   commands:
   - apt update && apt install -y llvm-dev libclang-dev linux-libc-dev clang
-  - rustup component add clippy
-  - cargo clippy --release
+  - rustup component add clippy rustfmt
+  - cargo fmt --check
+  - cargo clippy --release -D warning
   - cargo build --release
 
 - name: publish
   image: plugins/docker
-  privileged: true
   volumes:
   - name: docker
     path: /var/run/docker.sock
