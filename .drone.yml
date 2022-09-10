@@ -15,11 +15,11 @@ steps:
 - name: publish
   image: alpine:latest
   commands:
-  - apt add docker
-  - echo "{\"insecure-registries\" : [ \"registry.local:5000\" ]}" > /etc/docker/daemon.json
-  - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
-  - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
-  - docker rmi registry.local:5000/puuuh/wireguard-ext:latest
+    - apt add docker
+    - echo "{\"insecure-registries\" : [ \"registry.local:5000\" ]}" > /etc/docker/daemon.json
+    - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
+    - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
+    - docker rmi registry.local:5000/puuuh/wireguard-ext:latest
   volumes:
   - name: docker
     path: /var/run/docker.sock
