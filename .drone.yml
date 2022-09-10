@@ -15,7 +15,7 @@ steps:
 - name: publish
   image: alpine:latest
   commands:
-  - "apt add docker"
+  - apt add docker
   - echo "{\"insecure-registries\" : [ \"registry.local:5000\" ]}" > /etc/docker/daemon.json
   - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
   - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
