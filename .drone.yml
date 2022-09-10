@@ -18,10 +18,10 @@ steps:
   - name: docker
     path: /var/run/docker.sock
   settings:
-    repo: puuuh/wireguard-ext
+    repo: registry.local:puuuh/wireguard-ext
     username: puuuh
     password: p25*CXhlp74O
-
+    insecure: false
       
 volumes:
 - name: docker
