@@ -13,15 +13,15 @@ steps:
   - cargo build --release
 
 - name: publish
-  image: plugins/docker
+  image: docker:latest
   volumes:
   - name: docker
     path: /var/run/docker.sock
-  settings:
-    repo: registry.local:5000/puuuh/wireguard-ext
-    username: puuuh
-    password: p25*CXhlp74O
-    insecure: true
+  commands:
+  - echo "{\"insecure-registries\" : [ \"registry.local:5000\" ]}" > /etc/docker/daemon.json
+  - docker build -t registry.local:5000/puuuh/wireguard-ext:latest .
+  - docker push registry.local:5000/puuuh/wireguard-ext:latest --insecure
+  - docker rmi registry.local:5000/puuuh/wireguard-ext:latest
       
 volumes:
 - name: docker
