@@ -93,7 +93,7 @@ async fn new_client(
 
 #[derive(Debug, Parser)]
 struct Config {
-    #[clap(long, short, value_parser)]
+    #[clap(long, short, env = "LISTEN_ADDR", value_parser)]
     listen_addr: SocketAddr,
     #[clap(flatten)]
     service_config: ServiceConfig,

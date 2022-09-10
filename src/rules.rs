@@ -1,6 +1,10 @@
 use std::net::Ipv4Addr;
 
-use netlink_packet_route::{constants::*, rule, RtnlMessage, RuleHeader, RuleMessage};
+use netlink_packet_route::nlas::link;
+use netlink_packet_route::{
+    constants::*, route, rule, LinkHeader, LinkMessage, RouteHeader, RouteMessage, RtnlMessage,
+    RuleHeader, RuleMessage,
+};
 use netlink_packet_route::{NetlinkHeader, NetlinkMessage, NetlinkPayload};
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
 use thiserror::Error;
@@ -78,6 +82,25 @@ impl Rules {
         Ok(Self { socket, table: 200 })
     }
 
+    fn send_recv(&self, mut msg: NetlinkMessage<RtnlMessage>) -> Result<RtnlMessage, RulesError> {
+        msg.finalize();
+
+        let mut buf = vec![0; msg.buffer_len()];
+        msg.serialize(&mut buf[..]);
+
+        self.socket.send(&buf, 0)?;
+
+        let mut receive_buffer = Vec::with_capacity(4096);
+        let size = self.socket.recv(&mut receive_buffer, 0)?;
+        let bytes = &receive_buffer[..size];
+        let rx_packet = <NetlinkMessage<RtnlMessage>>::deserialize(bytes)?;
+        match rx_packet.payload {
+            NetlinkPayload::Error(e) => Err(RulesError::from(e.code)),
+            NetlinkPayload::InnerMessage(t) => Ok(t),
+            _ => unreachable!(),
+        }
+    }
+
     fn send(&self, mut msg: NetlinkMessage<RtnlMessage>) -> Result<(), RulesError> {
         msg.finalize();
 
@@ -96,6 +119,55 @@ impl Rules {
             NetlinkPayload::Ack(a) => Err(RulesError::from(a.code)),
             _ => unreachable!(),
         }
+    }
+
+    pub fn iface_by_name(&self, name: String) -> Result<u32, RulesError> {
+        match self.send_recv(NetlinkMessage {
+            header: NetlinkHeader {
+                flags: NLM_F_REQUEST,
+                ..Default::default()
+            },
+            payload: NetlinkPayload::from(RtnlMessage::GetLink(LinkMessage {
+                header: LinkHeader {
+                    interface_family: AF_INET as u8,
+                    index: 0,
+                    link_layer_type: 0,
+                    flags: 0,
+                    change_mask: u32::MAX,
+                },
+                nlas: vec![link::Nla::IfName(name)],
+            })),
+        }) {
+            Ok(RtnlMessage::NewLink(LinkMessage {
+                header: LinkHeader { index, .. },
+                ..
+            })) => Ok(index),
+            Err(e) => Err(e),
+            _ => unreachable!(),
+        }
+    }
+
+    pub fn add_ip_route(&self, addr: Ipv4Addr, iface: u32) -> Result<(), RulesError> {
+        let src = addr.octets().to_vec();
+
+        self.send(NetlinkMessage {
+            header: NetlinkHeader {
+                flags: NLM_F_REQUEST | NLM_F_CREATE | NLM_F_ACK,
+                ..Default::default()
+            },
+            payload: NetlinkPayload::from(RtnlMessage::NewRoute(RouteMessage {
+                header: RouteHeader {
+                    address_family: AF_INET as u8,
+                    protocol: RTPROT_BOOT,
+                    scope: RT_SCOPE_LINK,
+                    kind: RTN_UNICAST,
+                    table: RT_TABLE_MAIN,
+                    destination_prefix_length: 32,
+                    ..Default::default()
+                },
+                nlas: vec![route::Nla::Destination(src), route::Nla::Oif(iface)],
+            })),
+        })
     }
 
     pub fn set_double_vpn(&self, addr: Ipv4Addr, enable: bool) -> Result<(), RulesError> {

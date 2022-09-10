@@ -1,10 +1,21 @@
 use std::net::{IpAddr, Ipv4Addr};
 
 use cidr::Ipv4Cidr;
+use netlink_packet_core::{
+    NetlinkHeader, NetlinkMessage, NetlinkPayload, NLM_F_DUMP, NLM_F_REQUEST,
+};
+use netlink_packet_generic::GenlMessage;
+use netlink_packet_wireguard::{Wireguard, WireguardCmd};
+use netlink_sys::{
+    protocols::{NETLINK_GENERIC, NETLINK_ROUTE},
+    Socket, SocketAddr,
+};
 use thiserror::Error;
 use wireguard_control::{
     Backend, Device, DeviceUpdate, InterfaceName, InvalidInterfaceName, Key, PeerConfigBuilder,
 };
+
+use crate::rules::RulesError;
 
 #[derive(Debug, Error)]
 pub enum WireguardControlError {
@@ -37,6 +48,7 @@ impl WireguardControl {
         range: Ipv4Cidr,
     ) -> Result<Self, WireguardControlError> {
         let iface = iface.parse().map_err(WireguardControlError::IfaceParsing)?;
+
         let device = Device::get(&iface, Backend::Kernel).map_err(WireguardControlError::Io)?;
         let pub_key = device
             .public_key
@@ -44,12 +56,14 @@ impl WireguardControl {
             .to_base64();
         let range = range.iter().addresses();
 
-        Ok(Self {
+        let s = Self {
             iface,
             endpoint,
             range,
             pub_key,
-        })
+        };
+
+        Ok(s)
     }
 
     pub fn info(&self) -> WireguardInfo<'_> {

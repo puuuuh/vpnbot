@@ -50,17 +50,18 @@ pub struct Service {
     wireguard: Mutex<crate::wireguard::WireguardControl>,
     database: Database,
     rules: Rules,
+    iface: u32,
 }
 
 #[derive(Debug, Parser)]
 pub struct ServiceConfig {
-    #[clap(short, long, value_parser)]
+    #[clap(short, long, env = "CLIENT_RANGE", value_parser)]
     range: Ipv4Cidr,
-    #[clap(short, long, value_parser)]
+    #[clap(short, long, env = "WG_INTERFACE", value_parser)]
     interface: String,
-    #[clap(short, long, value_parser)]
+    #[clap(short, long, env = "WG_ENDPOINT", value_parser)]
     wireguard_endpoint: String,
-    #[clap(short, long, value_parser)]
+    #[clap(short, long, env = "DB", value_parser)]
     db: String,
 }
 
@@ -68,6 +69,8 @@ impl Service {
     #[instrument]
     pub async fn new(config: ServiceConfig) -> Result<Self, ServiceError> {
         let database = Database::new(&config.db).await?;
+        let rules = Rules::new()?;
+        let iface = rules.iface_by_name(config.interface.clone())?;
         Ok(Self {
             rules: Rules::new()?,
             database,
@@ -76,6 +79,7 @@ impl Service {
                 config.wireguard_endpoint,
                 config.range,
             )?),
+            iface,
         })
     }
 
@@ -118,6 +122,7 @@ AllowedIPs = 0.0.0.0/0, ::/0"
         };
 
         self.database.add_peer(Peer { ip, pub_key }).await?;
+        self.rules.add_ip_route(ip, self.iface)?;
 
         Ok(ClientInfo { config })
     }
@@ -143,6 +148,13 @@ AllowedIPs = 0.0.0.0/0, ::/0"
 
         for p in peers {
             mapped_peers.push((p.peer.ip, Key::from_raw(p.peer.pub_key)));
+
+            if let Err(e) = self.rules.add_ip_route(p.peer.ip, self.iface) {
+                warn!(
+                    "restore rule for {ip} failed with error: {e}",
+                    ip = p.peer.ip
+                )
+            }
             if let Err(e) = self.rules.set_double_vpn(p.peer.ip, p.settings.double_vpn) {
                 warn!(
                     "restore rule for {ip} failed with error: {e}",

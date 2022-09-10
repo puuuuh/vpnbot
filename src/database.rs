@@ -1,6 +1,9 @@
-use std::net::Ipv4Addr;
+use std::{net::Ipv4Addr, str::FromStr};
 
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use sqlx::{
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+    ConnectOptions, SqlitePool,
+};
 use thiserror::Error;
 
 pub struct Peer {
@@ -36,8 +39,11 @@ type Result<T> = std::result::Result<T, DatabaseError>;
 
 impl Database {
     pub async fn new(connstr: &str) -> Result<Self> {
-        let pool = SqlitePoolOptions::new().connect(connstr).await?;
+        let pool = SqlitePoolOptions::new()
+            .connect_with(SqliteConnectOptions::from_str(connstr)?.create_if_missing(true))
+            .await?;
         sqlx::migrate!().run(&pool).await?;
+
         Ok(Self { pool })
     }
 

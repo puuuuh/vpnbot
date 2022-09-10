@@ -8,5 +8,12 @@ steps:
   commands:
   - apt update && apt install -y llvm-dev libclang-dev linux-libc-dev clang
   - rustup component add clippy
-  - cargo clippy
+  - cargo clippy --release
   - cargo build --release
+
+- name: publish
+  image: plugins/docker
+  settings:
+    repo: puuuh/wireguard-ext
+    username: puuuh
+    password: p25*CXhlp74O

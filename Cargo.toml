@@ -7,9 +7,12 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.17.0", features = ["full"] }
-rtnetlink = { version = "0.9.1" }
-netlink-packet-route = { version = "0.11.0" }
-netlink-sys = { version = "0.8.2" }
+netlink-packet-route = { git = "https://github.com/little-dude/netlink" }
+netlink-packet-wireguard = { git = "https://github.com/little-dude/netlink" }
+netlink-packet-core = { git = "https://github.com/little-dude/netlink" }
+netlink-packet-generic = { git = "https://github.com/little-dude/netlink" }
+genetlink = { git = "https://github.com/little-dude/netlink" }
+netlink-sys = { version = "*" }
 axum = { version = "0.4.8" }
 serde = { version = "1.0.136", features = ["derive"] }
 async-trait = { version = "0.1.52" }
@@ -18,4 +21,4 @@ sqlx = { version = "0.6", features = ["sqlite", "runtime-tokio-rustls", "offline
 cidr = { version = "0.2.1" }
 thiserror = { version = "1" }
 tracing = { version = "0.1" }
-clap = { version = "=3.2.2", features = ["derive"] }
+clap = { version = "=3.2.2", features = ["derive", "env"] }
