@@ -1,8 +1,7 @@
 use std::{net::Ipv4Addr, str::FromStr};
 
 use sqlx::{
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-    ConnectOptions, SqlitePool,
+    sqlite::{SqliteConnectOptions, SqlitePoolOptions}, SqlitePool,
 };
 use thiserror::Error;
 
