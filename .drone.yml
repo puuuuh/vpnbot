@@ -9,7 +9,7 @@ steps:
   - apt update && apt install -y llvm-dev libclang-dev linux-libc-dev clang
   - rustup component add clippy rustfmt
   - cargo fmt --check
-  - cargo clippy --release -- -D warning
+  - cargo clippy --release -- -D warnings
   - cargo build --release
 
 - name: publish
