@@ -8,6 +8,7 @@ mod response;
 mod service;
 mod telegram;
 mod traits;
+mod utils;
 
 use std::{
     net::{IpAddr, SocketAddr},
@@ -17,7 +18,7 @@ use std::{
 use axum::{
     extract::{ConnectInfo, Extension},
     response::IntoResponse,
-    routing::{get, post, put},
+    routing::put,
     Json, Router,
 };
 use clap::Parser;
@@ -42,7 +43,14 @@ struct NewClient {
 
 #[derive(Serialize)]
 struct NewClientResponse {
-    pub config: String,
+    pub ip: IpAddr,
+    pub priv_key: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ServiceInfo {
+    pub addr: SocketAddr,
+    pub pub_key: String,
 }
 
 async fn status(
@@ -53,9 +61,17 @@ async fn status(
         IpAddr::V4(ip) => ip,
         _ => unimplemented!(),
     };
-    todo!();
 
-    // Json(routes.lock().unwrap().enabled(ip))
+    Json(
+        _service
+            .server_info()
+            .await
+            .map(|info| ServiceInfo {
+                addr: info.addr,
+                pub_key: info.pub_key,
+            })
+            .map_err(|e| e.to_string()),
+    )
 }
 
 async fn set_routing(
@@ -88,7 +104,10 @@ async fn new_client(
     let client = service.new_client(payload.key).await;
     Json(
         client
-            .map(|c| NewClientResponse { config: c.config })
+            .map(|c| NewClientResponse {
+                ip: c.ip,
+                priv_key: c.priv_key,
+            })
             .map_err(|e| e.to_string()),
     )
 }
@@ -119,9 +138,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tokio::spawn(telegram::start(service.clone(), database, config.admin_uid));
 
     let app = Router::new()
-        .route("/settings", get(status))
+        //.route("/status", get(status))
         .route("/settings", put(set_routing))
-        .route("/client", post(new_client))
+        //.route("/client", post(new_client))
         .layer(Extension(service));
 
     axum::Server::bind(&config.listen_addr)

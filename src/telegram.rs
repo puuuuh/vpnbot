@@ -8,8 +8,9 @@ use teloxide::{
 use std::{error::Error, sync::Arc};
 
 use crate::{
-    service::{ClientInfo, Service, ServiceError},
+    service::{ClientInfo, ServerInfo, Service, ServiceError},
     traits::TelegramDb,
+    utils,
 };
 
 #[derive(BotCommands, Clone)]
@@ -42,22 +43,22 @@ enum AdminCommand {
     Help,
 }
 
-enum Answer {
+enum Answer<'a> {
     Success,
-    Config(ClientInfo),
+    Config(ClientInfo, &'a ServerInfo),
     Error(String),
 }
 
-impl From<Result<ClientInfo, ServiceError>> for Answer {
-    fn from(r: Result<ClientInfo, ServiceError>) -> Self {
+impl<'a> From<Result<(ClientInfo, &'a ServerInfo), ServiceError>> for Answer<'a> {
+    fn from(r: Result<(ClientInfo, &'a ServerInfo), ServiceError>) -> Self {
         match r {
-            Ok(o) => Self::Config(o),
+            Ok((client, server)) => Self::Config(client, server),
             Err(e) => Self::Error(e.to_string()),
         }
     }
 }
 
-impl From<Result<(), Box<dyn std::error::Error + Send + Sync>>> for Answer {
+impl From<Result<(), Box<dyn std::error::Error + Send + Sync>>> for Answer<'static> {
     fn from(
         r: std::result::Result<
             (),
@@ -71,11 +72,14 @@ impl From<Result<(), Box<dyn std::error::Error + Send + Sync>>> for Answer {
     }
 }
 
-impl Answer {
+impl<'a> Answer<'a> {
     fn to_msg(&self) -> String {
         match self {
-            Answer::Config(c) => {
-                format!("Your config:\n ```\n{conf}\n```", conf = escape(&c.config))
+            Answer::Config(c, s) => {
+                format!(
+                    "Your config:\n ```\n{conf}\n```",
+                    conf = escape(&utils::format_config(c, s))
+                )
             }
             Answer::Error(e) => format!("Error: {e}", e = escape(&e.to_string())),
             Answer::Success => "Success\\!".to_owned(),
@@ -89,15 +93,24 @@ async fn admin<T: TelegramDb + 'static>(
     command: AdminCommand,
     service: Arc<Service>,
     database: Arc<T>,
+    server_info: Arc<ServerInfo>,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
     match command {
         AdminCommand::RegisterWithKey(key) => {
-            let answer: Answer = service.new_client(Some(key)).await.into();
+            let answer: Answer = service
+                .new_client(Some(key))
+                .await
+                .map(|res| (res, &*server_info))
+                .into();
 
             bot.send_message(message.chat.id, answer.to_msg()).await?
         }
         AdminCommand::Register => {
-            let answer: Answer = service.new_client(None).await.into();
+            let answer: Answer = service
+                .new_client(None)
+                .await
+                .map(|res| (res, &*server_info))
+                .into();
 
             bot.send_message(message.chat.id, answer.to_msg()).await?
         }
@@ -151,10 +164,13 @@ async fn is_admin<T: TelegramDb + 'static>(msg: Message, database: Arc<T>) -> bo
     matches!(database.is_admin(msg.chat.id.0).await, Ok(true))
 }
 
-pub async fn start<T: TelegramDb + 'static>(service: Arc<Service>, db: Arc<T>, admin_uid: i64) {
-    if let Err(e) = db.add_admin(admin_uid).await {
-        panic!("{}", e);
-    }
+pub async fn start<T: TelegramDb + 'static>(
+    service: Arc<Service>,
+    db: Arc<T>,
+    admin_uid: i64,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    db.add_admin(admin_uid).await?;
+    let server_info = service.server_info().await?;
     println!("start");
     tracing::info!("Starting command bot...");
 
@@ -174,9 +190,10 @@ pub async fn start<T: TelegramDb + 'static>(service: Arc<Service>, db: Arc<T>, a
             )
             .branch(filter_command::<Command, _>().chain(dptree::endpoint(user::<T>))),
     )
-    .dependencies(dptree::deps![service, db])
+    .dependencies(dptree::deps![service, db, Arc::new(server_info)])
     .default_handler(ignore_update)
     .build()
     .dispatch()
     .await;
+    Ok(())
 }

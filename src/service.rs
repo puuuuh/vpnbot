@@ -1,6 +1,6 @@
 use std::{
     array::TryFromSliceError,
-    net::{IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
 
@@ -15,7 +15,7 @@ use x25519_dalek::{PublicKey, StaticSecret};
 use crate::{
     database::{Database, DatabaseError, Peer, PeerSettings},
     netlink::{
-        wireguard::{Interface, PeerUpdate},
+        wireguard::{PeerUpdate, WireguardUpdate},
         Netlink, NetlinkError,
     },
 };
@@ -32,6 +32,8 @@ pub enum ServiceError {
     Unexpected(String),
     #[error("ip pool exhausted")]
     IpPoolExhausted,
+    #[error("client with this key already exists")]
+    ClientAlreadyExists,
 }
 
 impl From<TryFromSliceError> for ServiceError {
@@ -41,16 +43,24 @@ impl From<TryFromSliceError> for ServiceError {
 }
 
 pub struct ClientInfo {
-    pub config: String,
+    pub ip: IpAddr,
+    pub priv_key: Option<String>,
+}
+
+pub struct ServerInfo {
+    pub addr: SocketAddr,
+    pub pub_key: String,
 }
 
 pub struct Service {
-    netlink: Mutex<Netlink>,
     database: Arc<Database>,
+
+    netlink: Mutex<Netlink>,
     iface: u32,
+
     dvpn_table: u32,
-    interface: String,
-    endpoint: String,
+    endpoint: SocketAddr,
+    pub_key: String,
     range: Mutex<cidr::InetAddressIterator<Ipv4Addr>>,
 }
 
@@ -61,7 +71,8 @@ pub struct ServiceConfig {
     #[clap(short, long, env = "WG_INTERFACE", value_parser)]
     interface: String,
     #[clap(short, long, env = "WG_ENDPOINT", value_parser)]
-    wireguard_endpoint: String,
+    wireguard_endpoint: SocketAddr,
+
     #[clap(short = 'v', long, env = "DOUBLE_VPN_TABLE", value_parser)]
     dvpn_table: u32,
 }
@@ -71,14 +82,16 @@ impl Service {
     pub async fn new(config: ServiceConfig, db: Arc<Database>) -> Result<Self, ServiceError> {
         let mut netlink = Netlink::new()?;
         let iface = netlink.wg_interface(config.interface.clone()).await?;
+        let pk = base64::encode(&iface.public_key);
+
         Ok(Self {
             database: db,
             dvpn_table: config.dvpn_table,
             netlink: Mutex::new(netlink),
             iface: iface.index,
-            interface: config.interface,
             endpoint: config.wireguard_endpoint,
             range: Mutex::new(config.range.into_iter().addresses()),
+            pub_key: pk,
         })
     }
 
@@ -100,9 +113,7 @@ impl Service {
                 Ok((public.to_bytes(), Some(private.to_bytes())))
             })?;
 
-        let privkey_b64 = privkey
-            .map(|k| base64::encode(&k))
-            .unwrap_or_else(|| "<INSERT PRIVATE KEY>".to_owned());
+        let privkey_b64 = privkey.map(|k| base64::encode(&k));
 
         let ip = {
             self.range
@@ -112,43 +123,36 @@ impl Service {
                 .ok_or(ServiceError::IpPoolExhausted)?
         };
 
-        self.database.add_peer(Peer { ip, pub_key }).await?;
+        match self.database.add_peer(Peer { ip, pub_key }).await {
+            Ok(()) => {}
+            Err(DatabaseError::Sqlx(s))
+                if Some("2067") == s.as_database_error().and_then(|e| e.code()).as_deref() =>
+            {
+                return Err(ServiceError::ClientAlreadyExists)
+            }
+            Err(e) => Err(e)?,
+        };
 
         let mut nlink = self.netlink.lock().await;
 
-        let Interface {
-            public_key: wg_pk, ..
-        } = nlink.wg_interface(self.interface.clone()).await?;
-
         nlink
-            .add_peer(
+            .wireguard_update(
                 self.iface,
-                PeerUpdate {
-                    preshared_key: None,
-                    public_key: Some(pub_key),
-                    allowed_ips: Some(vec![IpCidr::new_host(IpAddr::V4(ip))]),
-                    endpoint: None,
+                WireguardUpdate {
+                    replace_peers: false,
+                    peers: vec![PeerUpdate {
+                        public_key: Some(pub_key),
+                        allowed_ips: Some(vec![IpCidr::new_host(IpAddr::V4(ip))]),
+                    }],
                 },
             )
             .await?;
-
-        let config = format!(
-            "[Interface]
-Address = {ip}
-PrivateKey = {privkey_b64}
-ListenPort = 51820
-
-[Peer]
-PublicKey = {wg_pk}
-Endpoint = {endpoint}
-AllowedIPs = 0.0.0.0/0, ::/0",
-            wg_pk = base64::encode(wg_pk),
-            endpoint = self.endpoint
-        );
-
         nlink.add_ip_route(ip, self.iface)?;
 
-        Ok(ClientInfo { config })
+        Ok(ClientInfo {
+            ip: IpAddr::V4(ip),
+            priv_key: privkey_b64,
+        })
     }
 
     #[instrument(skip(self))]
@@ -169,6 +173,14 @@ AllowedIPs = 0.0.0.0/0, ::/0",
     }
 
     #[instrument(skip(self))]
+    pub async fn server_info(&self) -> Result<ServerInfo, ServiceError> {
+        Ok(ServerInfo {
+            addr: self.endpoint,
+            pub_key: self.pub_key.clone(),
+        })
+    }
+
+    #[instrument(skip(self))]
     pub async fn init(&self) -> Result<(), ServiceError> {
         let peers = self.database.full_peers().await?;
         let mut mapped_peers = Vec::with_capacity(peers.len());
@@ -177,8 +189,6 @@ AllowedIPs = 0.0.0.0/0, ::/0",
             mapped_peers.push(PeerUpdate {
                 allowed_ips: Some(vec![IpCidr::new_host(IpAddr::V4(p.peer.ip))]),
                 public_key: Some(p.peer.pub_key),
-                preshared_key: None,
-                endpoint: None,
             });
 
             if let Err(e) = self
@@ -213,6 +223,14 @@ AllowedIPs = 0.0.0.0/0, ::/0",
 
         let mut wg = self.netlink.lock().await;
 
-        Ok(wg.replace_peers(self.iface, mapped_peers).await?)
+        Ok(wg
+            .wireguard_update(
+                self.iface,
+                WireguardUpdate {
+                    peers: mapped_peers,
+                    replace_peers: true,
+                },
+            )
+            .await?)
     }
 }

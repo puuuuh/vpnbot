@@ -1,7 +1,7 @@
 -- Add migration script here
 CREATE TABLE peers (
     ip INT4 NOT NULL PRIMARY KEY,
-    public_key BLOB NOT NULL
+    public_key BLOB NOT NULL UNIQUE
 );
 
 CREATE TABLE settings (
