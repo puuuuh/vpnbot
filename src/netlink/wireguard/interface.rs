@@ -1,4 +1,4 @@
-use netlink_packet_wireguard::{constants::WG_KEY_LEN, Wireguard, nlas::WgDeviceAttrs};
+use netlink_packet_wireguard::{constants::WG_KEY_LEN, nlas::WgDeviceAttrs, Wireguard};
 
 use super::Peer;
 
