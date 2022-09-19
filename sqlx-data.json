@@ -10,7 +10,129 @@
     },
     "query": "INSERT INTO peers VALUES($1, $2)"
   },
-  "280e5a8a7319b5962c8cc5cca291bb7da5ed9976b4fd8aaa82081e605eb5b67c": {
+  "5d09fefd5488d0145952dee6f0e03fc4c768be0dd5f9e95c3d98bd2b008b7f49": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 2
+      }
+    },
+    "query": "INSERT INTO settings VALUES($1, $2) \n            ON CONFLICT(ip) DO UPDATE SET double_vpn = excluded.double_vpn"
+  },
+  "5e503dcdeb08a33c9e922a4e5f0bcbdeff6aeaee5ff7b9ef5d481bcffe22fa95": {
+    "describe": {
+      "columns": [
+        {
+          "name": "is_admin",
+          "ordinal": 0,
+          "type_info": "Int64"
+        }
+      ],
+      "nullable": [
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT is_admin \n            FROM telegram WHERE id = $1"
+  },
+  "836299be3a96e3a17a7f9a5adca1e73afe14fcba85b6f50e19329560b6d1358f": {
+    "describe": {
+      "columns": [],
+      "nullable": [],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "INSERT INTO telegram VALUES($1, NULL, 1) \n            ON CONFLICT(id) DO UPDATE SET is_admin = 1"
+  },
+  "89409278b082a2e123e5c6a5af87034707b89d46ffebf003cdac59597f536b05": {
+    "describe": {
+      "columns": [
+        {
+          "name": "double_vpn",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "ip",
+          "ordinal": 1,
+          "type_info": "Int"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 2,
+          "type_info": "Blob"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT settings.double_vpn, peers.ip, peers.public_key \n            FROM peers LEFT JOIN settings ON peers.ip = settings.ip \n            WHERE peers.ip = $1"
+  },
+  "a0292215331f02e0879db7f51c30e5a08ce547c52921e0678ac6c732f57240f8": {
+    "describe": {
+      "columns": [
+        {
+          "name": "double_vpn",
+          "ordinal": 0,
+          "type_info": "Int64"
+        },
+        {
+          "name": "ip",
+          "ordinal": 1,
+          "type_info": "Int"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 2,
+          "type_info": "Blob"
+        }
+      ],
+      "nullable": [
+        true,
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 0
+      }
+    },
+    "query": "SELECT settings.double_vpn, peers.ip, peers.public_key \n            FROM peers\n            LEFT JOIN settings ON peers.ip = settings.ip"
+  },
+  "acb8043c91a39104953e4d8416e374182c86ed27d059b3fce252fd56547af719": {
+    "describe": {
+      "columns": [
+        {
+          "name": "ip",
+          "ordinal": 0,
+          "type_info": "Int"
+        },
+        {
+          "name": "public_key",
+          "ordinal": 1,
+          "type_info": "Blob"
+        }
+      ],
+      "nullable": [
+        false,
+        false
+      ],
+      "parameters": {
+        "Right": 1
+      }
+    },
+    "query": "SELECT * FROM peers \n            WHERE ip = $1"
+  },
+  "c5505e834957fae5780ac8e17186065984bbe8772dfa675765ceecf98b882f8d": {
     "describe": {
       "columns": [
         {
@@ -26,100 +148,16 @@
         "Right": 0
       }
     },
-    "query": "SELECT COUNT(*) as count FROM peers"
+    "query": "SELECT COUNT(*) as count \n            FROM peers"
   },
-  "295368e5fc88a0d32f5bb8d0bff53ccdfcedb48d777f4b4782acca4b12d7de01": {
-    "describe": {
-      "columns": [
-        {
-          "name": "ip",
-          "ordinal": 0,
-          "type_info": "Int"
-        },
-        {
-          "name": "public_key",
-          "ordinal": 1,
-          "type_info": "Blob"
-        }
-      ],
-      "nullable": [
-        false,
-        false
-      ],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "SELECT * FROM peers WHERE ip = $1"
-  },
-  "2aa33f3192c5a55bdbb061a3e3aaae67c8d7ede7f64e0a7273def5853da18800": {
-    "describe": {
-      "columns": [
-        {
-          "name": "double_vpn",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "ip",
-          "ordinal": 1,
-          "type_info": "Int"
-        },
-        {
-          "name": "public_key",
-          "ordinal": 2,
-          "type_info": "Blob"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        false
-      ],
-      "parameters": {
-        "Right": 1
-      }
-    },
-    "query": "SELECT settings.double_vpn, peers.ip, peers.public_key FROM peers LEFT JOIN settings ON peers.ip = settings.ip WHERE peers.ip = $1"
-  },
-  "66cc47ef0bb4ac33a3df749ca8dacd0cff77063d850deae2064a09c133202b1e": {
+  "e6588969e09fd21bbb3e84e0394c50c17a9f9950f5edaaed8be5dc62f553a154": {
     "describe": {
       "columns": [],
       "nullable": [],
       "parameters": {
-        "Right": 2
+        "Right": 1
       }
     },
-    "query": "INSERT INTO settings VALUES($1, $2) ON CONFLICT(ip) DO UPDATE SET double_vpn = excluded.double_vpn"
-  },
-  "829c73bab978349af3132e56557336232fbd640c9cbe0ddaa48cb6d836b4cac1": {
-    "describe": {
-      "columns": [
-        {
-          "name": "double_vpn",
-          "ordinal": 0,
-          "type_info": "Int64"
-        },
-        {
-          "name": "ip",
-          "ordinal": 1,
-          "type_info": "Int"
-        },
-        {
-          "name": "public_key",
-          "ordinal": 2,
-          "type_info": "Blob"
-        }
-      ],
-      "nullable": [
-        true,
-        false,
-        false
-      ],
-      "parameters": {
-        "Right": 0
-      }
-    },
-    "query": "SELECT settings.double_vpn, peers.ip, peers.public_key FROM peers LEFT JOIN settings ON peers.ip = settings.ip"
+    "query": "DELETE FROM telegram \n            WHERE id = $1"
   }
 }

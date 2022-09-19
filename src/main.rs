@@ -3,10 +3,11 @@
 #![deny(clippy::expect_used)]
 
 mod database;
+mod netlink;
 mod response;
-mod rules;
 mod service;
-mod wireguard;
+mod telegram;
+mod traits;
 
 use std::{
     net::{IpAddr, SocketAddr},
@@ -20,6 +21,7 @@ use axum::{
     Json, Router,
 };
 use clap::Parser;
+use database::Database;
 use serde::{Deserialize, Serialize};
 use service::{Service, ServiceConfig};
 
@@ -95,23 +97,32 @@ async fn new_client(
 struct Config {
     #[clap(long, short, env = "LISTEN_ADDR", value_parser)]
     listen_addr: SocketAddr,
+    #[clap(long, short, env = "DB", value_parser)]
+    db: String,
+    #[clap(long, short, env = "TELEGRAM_ADMIN", value_parser)]
+    admin_uid: i64,
     #[clap(flatten)]
     service_config: ServiceConfig,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    pretty_env_logger::init();
     let config = Config::parse();
-    let service = Service::new(config.service_config).await?;
+    let database = Arc::new(Database::new(&config.db).await?);
+    let service = Service::new(config.service_config, database.clone()).await?;
 
     // Restore all
     service.init().await?;
+    let service = Arc::new(service);
+
+    tokio::spawn(telegram::start(service.clone(), database, config.admin_uid));
 
     let app = Router::new()
         .route("/settings", get(status))
         .route("/settings", put(set_routing))
         .route("/client", post(new_client))
-        .layer(Extension(Arc::new(service)));
+        .layer(Extension(service));
 
     axum::Server::bind(&config.listen_addr)
         .serve(app.into_make_service_with_connect_info::<SocketAddr, _>())
