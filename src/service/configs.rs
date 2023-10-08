@@ -46,7 +46,7 @@ AllowedIPs = 0.0.0.0/0, ::/0",
                 .priv_key
                 .map(|k| base64::engine::general_purpose::STANDARD.encode(k))
                 .unwrap_or("<INSERT PRIVATE KEY>".to_owned()),
-            pub_key = base64::engine::general_purpose::STANDARD.encode(self.pub_key),
+            pub_key = server.pub_key,
             endpoint = server.addr
         )
         .into_bytes()
