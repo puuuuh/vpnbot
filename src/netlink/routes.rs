@@ -8,32 +8,33 @@ use netlink_packet_route::{
     RT_SCOPE_LINK, RT_TABLE_MAIN,
 };
 
-use super::{Netlink, NetlinkError};
+use super::{error::NetlinkError, Netlink};
 
 impl Netlink {
     pub fn add_ip_route(&self, addr: Ipv4Addr, iface: u32) -> Result<(), NetlinkError> {
         let src = addr.octets().to_vec();
 
+        let mut header = NetlinkHeader::default();
+        header.flags = NLM_F_REQUEST | NLM_F_CREATE | NLM_F_ACK;
+
+        let mut route_header = RouteHeader::default();
+        route_header.address_family = AF_INET as u8;
+        route_header.protocol = RTPROT_BOOT;
+        route_header.scope = RT_SCOPE_LINK;
+        route_header.kind = RTN_UNICAST;
+        route_header.table = RT_TABLE_MAIN;
+        route_header.destination_prefix_length = 32;
+
+        let mut route_message = RouteMessage::default();
+        route_message.header = route_header;
+        route_message.nlas = vec![route::Nla::Destination(src), route::Nla::Oif(iface)];
+
         Self::send::<_, RtnlMessage>(
             &self.route,
-            NetlinkMessage {
-                header: NetlinkHeader {
-                    flags: NLM_F_REQUEST | NLM_F_CREATE | NLM_F_ACK,
-                    ..Default::default()
-                },
-                payload: NetlinkPayload::from(RtnlMessage::NewRoute(RouteMessage {
-                    header: RouteHeader {
-                        address_family: AF_INET as u8,
-                        protocol: RTPROT_BOOT,
-                        scope: RT_SCOPE_LINK,
-                        kind: RTN_UNICAST,
-                        table: RT_TABLE_MAIN,
-                        destination_prefix_length: 32,
-                        ..Default::default()
-                    },
-                    nlas: vec![route::Nla::Destination(src), route::Nla::Oif(iface)],
-                })),
-            },
+            NetlinkMessage::new(
+                header,
+                NetlinkPayload::from(RtnlMessage::NewRoute(route_message)),
+            ),
         )
     }
 }

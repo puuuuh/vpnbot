@@ -1,44 +1,20 @@
+pub mod error;
 pub mod routes;
 pub mod rules;
 pub mod wireguard;
 
 use std::fmt::Debug;
 
-use genetlink::{new_connection, GenetlinkError, GenetlinkHandle};
-use netlink_packet_core::{NetlinkDeserializable, NetlinkSerializable};
-use netlink_packet_route::{NetlinkMessage, NetlinkPayload};
+use genetlink::{new_connection, GenetlinkHandle};
+use netlink_packet_core::{
+    NetlinkDeserializable, NetlinkMessage, NetlinkPayload, NetlinkSerializable,
+};
 
 use netlink_sys::{protocols::NETLINK_ROUTE, Socket, SocketAddr};
-use thiserror::Error;
 
-#[derive(Debug, Error)]
-pub enum NetlinkError {
-    #[error("Already enabled")]
-    AlreadyExists,
-    #[error("Already disabled")]
-    NotFound,
-    #[error("Unknown error: {0}")]
-    Unknown(i32),
-    #[error("Netlink io error: {0}")]
-    NetlinkIo(#[from] std::io::Error),
-    #[error("Netlink decode error: {0}")]
-    NetlinkDecode(#[from] netlink_packet_route::DecodeError),
-    #[error("Netlink decode error: {0}")]
-    Genetlink(#[from] GenetlinkError),
-    #[error("Netlink unexpected response")]
-    UnexpectedResponse,
-}
+use error::NetlinkError;
 
-impl From<i32> for NetlinkError {
-    fn from(i: i32) -> Self {
-        match i {
-            -2 => Self::NotFound,
-            -17 => Self::AlreadyExists,
-            i => Self::Unknown(i),
-        }
-    }
-}
-
+#[derive(Clone)]
 pub struct Netlink {
     route: Socket,
     generic: GenetlinkHandle,
@@ -105,7 +81,7 @@ impl Netlink {
             NetlinkPayload::Error(e) => Err(NetlinkError::from(e.code)),
             NetlinkPayload::Ack(a) if a.code == 0 => Ok(()),
             NetlinkPayload::Ack(a) => Err(NetlinkError::from(a.code)),
-            _ => unreachable!(),
+            _ => Err(NetlinkError::UnexpectedResponse),
         }
     }
 }

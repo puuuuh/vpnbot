@@ -1,6 +1,6 @@
 use cidr::IpCidr;
 use netlink_packet_wireguard::{
-    constants::{AF_INET, WG_KEY_LEN},
+    constants::{AF_INET, WGPEER_F_REMOVE_ME, WG_KEY_LEN},
     nlas::{WgAllowedIp, WgAllowedIpAttrs, WgPeerAttrs},
 };
 
@@ -14,6 +14,7 @@ pub struct WireguardUpdate {
 pub struct PeerUpdate {
     pub public_key: Option<[u8; WG_KEY_LEN]>,
     pub allowed_ips: Option<Vec<IpCidr>>,
+    pub remove: bool,
 }
 
 impl From<PeerUpdate> for Vec<WgPeerAttrs> {
@@ -34,6 +35,9 @@ impl From<PeerUpdate> for Vec<WgPeerAttrs> {
                 })
                 .collect();
             res.push(WgPeerAttrs::AllowedIps(allowed_ips));
+        }
+        if p.remove {
+            res.push(WgPeerAttrs::Flags(WGPEER_F_REMOVE_ME))
         }
 
         res

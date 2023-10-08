@@ -6,27 +6,35 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.17.0", features = ["full"] }
-netlink-packet-route = { git = "https://github.com/little-dude/netlink" }
-netlink-packet-wireguard = { git = "https://github.com/little-dude/netlink" }
-netlink-packet-core = { git = "https://github.com/little-dude/netlink" }
-netlink-packet-generic = { git = "https://github.com/little-dude/netlink" }
-genetlink = { git = "https://github.com/little-dude/netlink" }
+tokio = { version = "1", features = ["full"] }
+netlink-packet-route = { version = "0.15.0" }
+netlink-packet-wireguard = { version = "0.2.1" }
+netlink-packet-core = { version = "0.5.0" }
+netlink-packet-generic = { version = "0.3.2" }
+genetlink = { version = "0.2.4" }
 netlink-sys = { version = "*" }
 axum = { version = "0.4.8" }
 serde = { version = "1.0.136", features = ["derive"] }
+serde_json = { version = "1.0.79" }
 async-trait = { version = "0.1.52" }
-sqlx = { version = "0.6", features = ["sqlite", "runtime-tokio-rustls", "offline"] }
+sqlx = { version = "0.6", features = ["sqlite", "runtime-tokio-rustls"] }
 cidr = { version = "0.2.1" }
 thiserror = { version = "1" }
 tracing = { version = "0.1" }
 clap = { version = "=3.2.2", features = ["derive", "env"] }
 pretty_env_logger = { version = "0.4.0" }
-teloxide = { version = "0.10.0", features = ["macros"] }
+teloxide = { version = "0.12.2", default-features = false, features = ["macros", "rustls"] }
 futures = { version = "0.3.21" }
-base64 = { version = "0.12" }
+base64 = { version = "0.21" }
 x25519-dalek = {version = "2.0.0-pre.1"}
 rand = { version = "0.8" }
+hyper = { version = "0.14.17" }
+jwt = { version = "0.16" }
+hmac = { version = "0.12.1" }
+sha2 = { version = "0.10.2" }
+uuid = { version = "1.0.0", features = ["v4", "serde"] }
+netlink-packet-utils = "0.5.2"
+time = { version = "0.3" }
 
 [profile.release]
-debug=true
+strip=true

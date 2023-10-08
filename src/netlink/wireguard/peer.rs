@@ -5,8 +5,9 @@ use netlink_packet_wireguard::{
     constants::WG_KEY_LEN,
     nlas::{WgAllowedIpAttrs, WgPeerAttrs},
 };
+use time::OffsetDateTime;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Peer {
     pub preshared_key: Option<[u8; WG_KEY_LEN]>,
     pub public_key: [u8; WG_KEY_LEN],
@@ -15,24 +16,8 @@ pub struct Peer {
     pub rx: u64,
     pub allowed_ips: Vec<IpCidr>,
     pub persistent_keepalive: u16,
-    pub last_handshake: SystemTime,
+    pub last_handshake: Option<OffsetDateTime>,
     pub endpoint: Option<SocketAddr>,
-}
-
-impl Default for Peer {
-    fn default() -> Self {
-        Self {
-            preshared_key: Default::default(),
-            public_key: Default::default(),
-            listen_port: Default::default(),
-            tx: Default::default(),
-            rx: Default::default(),
-            allowed_ips: Default::default(),
-            persistent_keepalive: Default::default(),
-            last_handshake: std::time::SystemTime::UNIX_EPOCH,
-            endpoint: Default::default(),
-        }
-    }
 }
 
 impl From<Vec<WgPeerAttrs>> for Peer {
@@ -54,7 +39,10 @@ impl From<Vec<WgPeerAttrs>> for Peer {
                     res.persistent_keepalive = v;
                 }
                 WgPeerAttrs::LastHandshake(v) => {
-                    res.last_handshake = v;
+                    let ts = v.duration_since(SystemTime::UNIX_EPOCH).ok().and_then(|n| {
+                        OffsetDateTime::from_unix_timestamp_nanos(n.as_nanos() as _).ok()
+                    });
+                    res.last_handshake = ts;
                 }
                 WgPeerAttrs::RxBytes(v) => {
                     res.rx = v;

@@ -1,6 +1,6 @@
-use crate::service::{ClientInfo, ServerInfo};
+use crate::service::{ConfigInfo, ServerInfo};
 
-pub fn format_config(config: &ClientInfo, server_info: &ServerInfo) -> String {
+pub fn format_config(config: &ConfigInfo, server_info: &ServerInfo) -> String {
     format!(
         "[Interface]
 Address = {ip}

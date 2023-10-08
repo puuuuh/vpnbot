@@ -17,11 +17,28 @@ use netlink_packet_wireguard::{
 
 use super::{Netlink, NetlinkError};
 
+pub enum WireguardInterfaceId {
+    Name(String),
+    Index(u32),
+}
+
+impl From<WireguardInterfaceId> for WgDeviceAttrs {
+    fn from(val: WireguardInterfaceId) -> Self {
+        match val {
+            WireguardInterfaceId::Name(name) => WgDeviceAttrs::IfName(name),
+            WireguardInterfaceId::Index(idx) => WgDeviceAttrs::IfIndex(idx),
+        }
+    }
+}
+
 impl Netlink {
-    pub async fn wg_interface(&mut self, ifname: String) -> Result<Interface, NetlinkError> {
+    pub async fn wg_interface(
+        &mut self,
+        id: WireguardInterfaceId,
+    ) -> Result<Interface, NetlinkError> {
         let genlmsg: GenlMessage<Wireguard> = GenlMessage::from_payload(Wireguard {
             cmd: WireguardCmd::GetDevice,
-            nlas: vec![WgDeviceAttrs::IfName(ifname)],
+            nlas: vec![id.into()],
         });
 
         let mut nlmsg = NetlinkMessage::from(genlmsg);
@@ -44,7 +61,7 @@ impl Netlink {
 
     pub async fn wireguard_update(
         &mut self,
-        index: u32,
+        id: WireguardInterfaceId,
         update: WireguardUpdate,
     ) -> Result<(), NetlinkError> {
         let flags = if update.replace_peers {
@@ -56,7 +73,7 @@ impl Netlink {
         let genlmsg: GenlMessage<Wireguard> = GenlMessage::from_payload(Wireguard {
             cmd: WireguardCmd::SetDevice,
             nlas: vec![
-                WgDeviceAttrs::IfIndex(index),
+                id.into(),
                 WgDeviceAttrs::Flags(flags),
                 WgDeviceAttrs::Peers(update.peers.into_iter().map(|p| WgPeer(p.into())).collect()),
             ],
